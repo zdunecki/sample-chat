@@ -1,0 +1,75 @@
+version: "3.5"
+
+services:
+  api-gateway:
+    image: 127.0.0.1:5000/api-gateway
+    build:
+      context: ./api-gateway
+    command: node app.js
+    env_file:
+    - ./api-gateway/.env
+    ports:
+    - "5500:5500"
+    deploy:
+      mode: replicated
+      replicas: 1 #feel free to scale up
+      endpoint_mode: vip
+    depends_on:
+    - mysql
+
+  api:
+    image: 127.0.0.1:5000/api
+    build:
+      context: ./api
+    entrypoint: /usr/src/app/docker-entrypoint.sh
+    command: node app.js
+    env_file:
+    - ./api/.env
+    deploy:
+      mode: replicated
+      replicas: 1 #feel free to scale up
+      endpoint_mode: vip
+    depends_on:
+    - mysql
+    - api-gateway
+
+  socket:
+    image: 127.0.0.1:5000/socket
+    build:
+      context: ./socket
+    command: node app.js
+    env_file:
+    - ./socket/.env
+    deploy:
+      mode: replicated
+      replicas: 1 #feel free to scale up #TODO: cannot scale up more than 1
+      endpoint_mode: vip
+    depends_on:
+    - api
+    - api-gateway
+    - redis
+
+  redis:
+    image: redis:5.0
+    restart: always
+    ports:
+    - 6379:6379
+    volumes:
+    - redis:/data
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    command: --init-file /data/application/init.sql
+    env_file:
+      - ./.env
+    ports:
+    - 3306:3306
+    volumes:
+    - ./api/init.sql:/data/application/init.sql
+    - ./mysql.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf #skip-grant-tables only for demo
+    - mysql:/var/lib/mysql
+
+volumes:
+  redis:
+  mysql:

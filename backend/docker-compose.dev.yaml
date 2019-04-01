@@ -1,0 +1,60 @@
+version: "3.5"
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    command: node app.js
+    volumes:
+    - ./api-gateway:/usr/src/app
+    env_file:
+    - ./api-gateway/.env
+    ports:
+    - "5500:5500"
+    depends_on:
+      - mysql
+
+  api:
+    build:
+      context: ./api
+    command: node app.js
+    entrypoint: /usr/src/app/docker-entrypoint.sh
+    volumes:
+    - ./api:/usr/src/app
+    env_file:
+    - ./api/.env
+    depends_on:
+      - mysql
+
+  socket:
+    build:
+      context: ./socket
+    command: node app.js
+    volumes:
+    - ./socket:/usr/src/app
+    env_file:
+    - ./socket/.env
+
+  redis:
+    image: redis:5.0
+    restart: always
+    ports:
+    - 6379:6379
+    volumes:
+    - redis:/data
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    command: --init-file /data/application/init.sql
+    env_file:
+    - ./.env
+    ports:
+    - 3306:3306
+    volumes:
+    - ./api/init.sql:/data/application/init.sql
+    - mysql:/var/lib/mysql
+
+volumes:
+  redis:
+  mysql:

@@ -1,0 +1,2 @@
+CREATE DATABASE IF NOT EXISTS sample_chat;
+USE dev;
